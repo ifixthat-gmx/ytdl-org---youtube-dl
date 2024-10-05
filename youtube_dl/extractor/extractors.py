@@ -1613,7 +1613,16 @@ from .xnxx import XNXXIE
 from .xstream import XstreamIE
 from .xtube import XTubeUserIE, XTubeIE
 from .xuite import XuiteIE
-from .xvideos import XVideosIE
+from .xvideos import (
+    XVideosIE,
+    XVideosUserIE,
+    XVideosCategoryIE,
+    XVideosChannelIE,
+    XVideosPlaylistIE,
+    XVideosRelatedIE,
+    XVideosSearchIE,
+    XVideosSearchKeyIE,
+)
 from .xxxymovies import XXXYMoviesIE
 from .yahoo import (
     YahooIE,
