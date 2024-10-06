@@ -336,6 +336,8 @@ class XVideosIE(InfoExtractor):
 
 ##,"id_video":64065209,"encoded_id_video":"kdhlebvb94e","uploader_id":522199271,"uploader":"sperm-mania","uploader_url":"\/sperm-mania","video_tags":["facial","creampie","shorthair","bukkake","bbw","marie","cumshot-compilation","huge-cumshot","pussy-bukkake","cum-fetish","cum-in-panties","japanese-bukkake","cum-lube","cock-cum","bukkake-compilation"],"video_models":[]}};</script>
 
+##,"id_video":9291396,"encoded_id_video":"ldcplu2f83","uploader_id":13808770,"uploader":"brownholefucker","uploader_url":"\/profiles\/brownholefucker","video_tags":["interracial","milf","bbc"],"video_models":[]}};</script>
+
 #### TO
 #,"uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:,"uploader_url":"\\/([-a-z0-9]+)"|)
 #,"video_tags":(\[[^]].\]),
@@ -355,7 +357,8 @@ class XVideosIE(InfoExtractor):
         uploader_id = 'NULL'
         uploader_url = 'NULL'
         video_meta_matches = re.findall(
-            r',"uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:,"uploader_url":"\\/([-a-z0-9]+)"|)', webpage)
+            r',"uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:"uploader_url":"([-a-z0-9\\/]+)"|)', webpage)
+        _ifixthat_print_or_not('video_meta_matches : "%s"' % video_meta_matches)
         if len(video_meta_matches) > 0:
             uploader_id = video_meta_matches[0][0]
             if video_meta_matches[0][1] == '':
@@ -364,7 +367,7 @@ class XVideosIE(InfoExtractor):
                 uploader_url = '/'
             else:
                 uploader = video_meta_matches[0][1]
-                uploader_url = video_meta_matches[0][2]
+                uploader_url = video_meta_matches[0][2].replace('\\','') # strip \
 
         # get uploader from url-list for more info
         uploader_type = 'NULL'
