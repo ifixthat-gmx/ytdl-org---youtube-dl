@@ -515,8 +515,7 @@ class XVideosIE(InfoExtractor):
             'uploader_name_txt_orig': uploader_name_txt_orig,
             'uploader_user_id': uploader_user_id, # same as uploader_id ?
             'uploader_user_profile': uploader_user_profile, # same as uploader_name_url ?
-           # 'actors': actors,
-           ## 'otherprofiles': otherprofiles,
+            'otherprofiles': otherprofiles,
         }
 
 #################################################################################################################################################################################### diff-user-types
