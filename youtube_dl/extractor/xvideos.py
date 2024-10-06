@@ -530,19 +530,16 @@ class XVideosIE(InfoExtractor):
 class XVideosUserIE(InfoExtractor):
     # probably incomplete
     _VALID_URL = r'''(?x)
-                    (?:
-                        xvideos_user:| # how to distinguish ???
-                        https?://www\.xvideos\.com/
-                            (?P<type>
-                                amateur-channels|
-                                channels|
-                                model-channels|
-                                models|
-                                pornstar-channels|
-                                pornstars|
-                                profiles|
-                            )/?
-                    )(?P<id>[0-9a-zA-Z\-\._]+)(?:\#_tabVideos)?
+                    (?:xvideos:|https?://www\.xvideos\.com)/?
+                    (?P<type>
+                        amateur-channels|
+                        channels|
+                        model-channels|
+                        models|
+                        pornstar-channels|
+                        pornstars|
+                        profiles|
+                    )/(?P<id>[0-9a-zA-Z\-\._]+)(?:\#_tabVideos)?
                     '''
 
     def _entries(self, user_id, user_type, id_user):
