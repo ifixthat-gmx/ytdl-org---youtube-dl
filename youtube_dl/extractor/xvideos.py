@@ -53,6 +53,8 @@ from ..utils import (
 import datetime
 import os
 
+import json
+
 ##IFixThat debug print_or_not
 
 def _ifixthat_print_or_not(line):
@@ -521,9 +523,139 @@ class XVideosIE(InfoExtractor):
             'otherprofiles': otherprofiles,
         }
 
+##IFixThat other extractors
+
 #################################################################################################################################################################################### diff-user-types
 
-#class XVideosUserIE(InfoExtractor):
+class XVideosUserIE(InfoExtractor):
+    # probably incomplete
+    _VALID_URL = r'''(?x)
+                    (?:
+                        xvideos_user:| # how to distinguish ???
+                        https?://www\.xvideos\.com/
+                            (?P<type>
+                                amateur-channels|
+                                channels|
+                                model-channels|
+                                models|
+                                pornstar-channels|
+                                pornstars|
+                                profiles|
+                            )/?
+                    )(?P<id>[0-9a-zA-Z\-\._]+)(?:\#_tabVideos)?
+                    '''
+
+    def _entries(self, user_id, user_type, id_user):
+        # QUICKIES & VIDEOS
+        # https://www.xvideos.com/quickies-api/profilevideos/all/none/B/%ID_USER%/0 & https://www.xvideos.com/%%/%USER_ID%/videos/best/[0...]
+        # yield self.url_result(video_url, ie=XVideosUserIE.ie_key(), video_id=video_id)
+        quickies_urlbase = 'https://www.xvideos.com/quickies-api/profilevideos/all/none/B/%s/' % id_user
+        quickies_url = quickies_urlbase + '0'
+        _ifixthat_print_or_not('quickies_url %s' % quickies_url)
+        quickies_json = self._download_webpage(quickies_url, user_id, fatal=False, errnote='(2 ignore) no json for quickies')
+        #_ifixthat_print_or_not('quickies_json --%s--' % quickies_json)
+        if quickies_json:
+            #self._ifixthat_helper_file_write('/.../com.xvideos.www--slash--'+user_type+'--slash--'+user_id+'.quickies.json', quickies_json)
+            #_ifixthat_print_or_not('--------------------------------------------------------------------------------------------q json')
+            #_ifixthat_print_or_not(json.dumps(quickies_json))
+            quickies_parsed = json.loads(quickies_json)
+            #_ifixthat_print_or_not('--------------------------------------------------------------------------------------------q parsed')
+            #_ifixthat_print_or_not(quickies_parsed)
+            #_ifixthat_print_or_not('-------------------------------------------------------------------------------------------- looping')
+            if 'videos' in quickies_parsed:
+                #_ifixthat_print_or_not(quickies_parsed["videos"])
+                for quickie in quickies_parsed["videos"]:
+                    # get 'id','user_id','profile_name','nexuscat','url','title'
+                    _ifixthat_print_or_not('quickies id: %s ++ user_id: %s' % (quickie["id"], quickie["user_id"]))
+                    quickie_url = 'https://www.xvideos.com%s' % quickie["url"]
+                    video_url=quickie_url
+                    _ifixthat_print_or_not('video_url %s' % video_url)
+                    video_id=quickie["id"]
+                    yield self.url_result(video_url, ie=XVideosIE.ie_key(), video_id=video_id)
+            _ifixthat_print_or_not('hasMoreVideos	%s' % quickies_parsed["hasMoreVideos"]) # True or False
+            current_page = 1
+            while quickies_parsed["hasMoreVideos"]: # there are more quickies
+                quickies_url = quickies_urlbase + str(current_page)
+                _ifixthat_print_or_not('quickies_url %s' % quickies_url)
+                quickies_json = self._download_webpage(quickies_url, user_id, fatal=False, errnote='(2 ignore) no json for quickies')
+                quickies_parsed = json.loads(quickies_json)
+                if 'videos' in quickies_parsed:
+                    #_ifixthat_print_or_not(quickies_parsed["videos"])
+                    for quickie in quickies_parsed["videos"]:
+                        # get 'id','user_id','profile_name','nexuscat','url','title'
+                        _ifixthat_print_or_not('quickies id: %s ++ user_id: %s' % (quickie["id"], quickie["user_id"]))
+                        quickie_url = 'https://www.xvideos.com%s' % quickie["url"]
+                        video_url=quickie_url
+                        _ifixthat_print_or_not('video_url %s' % video_url)
+                        video_id=quickie["id"]
+                        yield self.url_result(video_url, ie=XVideosIE.ie_key(), video_id=video_id)
+                current_page = current_page + 1
+
+
+        # page:0 always - rest if needed
+        videos_urlbase = 'https://www.xvideos.com/%s/%s/videos/best/' % (user_type, user_id)
+        videos_url = videos_urlbase + '0'
+        _ifixthat_print_or_not('videos_url %s ' % videos_url)
+        videos_json = self._download_webpage(videos_url, user_id)
+        #self._ifixthat_helper_file_write('/.../com.xvideos.www--slash--'+user_type+'--slash--'+user_id+'.videos0.json', videos_json)
+        videos_parsed = json.loads(videos_json)
+        videos_count = videos_parsed["nb_videos"]
+        if videos_count > 0:
+            # get videos from page:0
+            for video in videos_parsed["videos"]:
+                # get 'id','user_id','profile_name','nexuscat','url','title'
+                #print(quickie["id"])
+                #print(quickie["user_id"])
+                video_clickurl = video["u"]
+                # convert video_u to direct url
+# e.g. "/prof-video-click/upload/agm-65/pmpclhe254/animals_-_porn_music_compilation" --> "https://www.xvideos.com/video.pmpclhe254/animals_-_porn_music_compilation"
+                video_clickurl_stripped = video_clickurl.replace("/prof-video-click/upload/%s/" % user_id,"/video.")
+                video_clickurl_stripped = video_clickurl_stripped.replace("/prof-video-click/model/%s/" % user_id,"/video.")
+                video_url = 'https://www.xvideos.com%s' % video_clickurl_stripped
+                _ifixthat_print_or_not('video_url %s' % video_url)
+                video_id=video["id"]
+                yield self.url_result(video_url, ie=XVideosIE.ie_key(), video_id=video_id)
+            # get additional pages ?
+            videos_iterator = videos_parsed["nb_per_page"] # 36
+            current_page = 1
+            videos_count = videos_count - videos_iterator
+            while videos_count > 0:
+                # more
+                videos_count = videos_count - videos_iterator
+                videos_url = videos_urlbase + str(current_page)
+                _ifixthat_print_or_not('videos_url %s' % videos_url)
+                videos_json = self._download_webpage(videos_url, user_id)
+                #self._ifixthat_helper_file_write('/.../com.xvideos.www--slash--'+user_type+'--slash--'+user_id+'.videos'+str(current_page)+'.json', videos_json)
+                current_page = current_page + 1
+                videos_parsed = json.loads(videos_json)
+                if not videos_parsed["result"]:
+                    break # no more videos/pages
+                for video in videos_parsed["videos"]:
+                    video_clickurl = video["u"]
+                    video_clickurl_stripped = video_clickurl.replace("/prof-video-click/upload/%s/" % user_id,"/video.")
+                    video_clickurl_stripped = video_clickurl_stripped.replace("/prof-video-click/model/%s/" % user_id,"/video.")
+                    video_url = 'https://www.xvideos.com%s' % video_clickurl_stripped
+                    _ifixthat_print_or_not('video_url %s' % video_url)
+                    video_id=video["id"]
+                    yield self.url_result(video_url, ie=XVideosIE.ie_key(), video_id=video_id)
+
+    def _real_extract(self, url):
+        # prepare needed vars and download userpage
+        id_user = 0
+        user_name = '' # needed ?
+        user_id = self._match_id(url)
+        tmatch = re.compile(self._VALID_URL).match(url)
+        assert tmatch
+        user_type = compat_str(tmatch.group('type'))
+        if user_type == '':
+            user_type = 'channels'
+            _ifixthat_print_or_not('empty user_type set to channels')
+        userpage = 'https://www.xvideos.com/%s/%s' % (user_type, user_id)
+        webpage = self._download_webpage(userpage, user_id)
+        id_user = re.findall(r'"id_user":([0-9]+)', webpage)[0]
+        _ifixthat_print_or_not('user_id %s + user_type %s ++ id_user %s' % (user_id, user_type, id_user))
+
+        return self.playlist_result(self._entries(user_id, user_type, id_user), user_id)
 
 #################################################################################################################################################################################### tag
 

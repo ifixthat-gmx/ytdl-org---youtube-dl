@@ -1616,12 +1616,12 @@ from .xuite import XuiteIE
 from .xvideos import (
     XVideosIE,
     XVideosUserIE,
-    XVideosCategoryIE,
-    XVideosChannelIE,
-    XVideosPlaylistIE,
-    XVideosRelatedIE,
-    XVideosSearchIE,
-    XVideosSearchKeyIE,
+#    XVideosCategoryIE,
+#    XVideosChannelIE,
+#    XVideosPlaylistIE,
+#    XVideosRelatedIE,
+#    XVideosSearchIE,
+#    XVideosSearchKeyIE,
 )
 from .xxxymovies import XXXYMoviesIE
 from .yahoo import (
