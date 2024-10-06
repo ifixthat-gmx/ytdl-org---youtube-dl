@@ -34,12 +34,12 @@ from ..utils import (
     compat_urlparse,
     remove_end,
     remove_start,
-    T,
-    traverse_obj,
-    try_call,
-    txt_or_none,
-    join_nonempty,
-    LazyList,
+#    T,
+#    traverse_obj,
+#    try_call,
+#    txt_or_none,
+#    join_nonempty,
+#    LazyList,
     merge_dicts,
     parse_count,
     get_element_by_class,
@@ -49,9 +49,66 @@ from ..utils import (
 )
 
 ##IFixThat additional imports (I insert them into every Extractor that I modify - can be removed if not needed)
+
 import datetime
 import os
+
+##IFixThat debug print_or_not
+
+def _ifixthat_print_or_not(line):
+    doprint = 1 # 0=normal , 1=debug
+    if doprint > 0:
+        print(line)
+
+##IFixThat general helper functions (I insert them into every Extractor that I modify - can be removed if not needed)
+
+def _ifixthat_helper_file_exists(self,filename):
+    _ifixthat_print_or_not('does '+filename+' exist?')
+    if os.path.exists(filename):
+        _ifixthat_print_or_not('yes')
+        return True
+    else:
+        _ifixthat_print_or_not('no')
+        return False
+
+def _ifixthat_helper_check_strbytelen(self,string):
+    strbytelen = len(string)
+    # is string (filename/paths) too long -> this value is customized to my setup and works for me - probably needs some more testing with diff. filesystems, filepaths, videos, ...
+    if strbytelen > 274:
+        return False
+    else:
+        return True
+
+def _ifixthat_helper_file_mv(self,filename_old, filename_new):
+    if self._ifixthat_helper_check_strbytelen(filename_new):
+        os.rename(filename_old, filename_new)
+
+def _ifixthat_helper_file_archive(self,filename):
+    self._ifixthat_helper_file_mv(filename, filename+'.backup_'+datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+
+def _ifixthat_helper_file_write(self,filename, content):
+    if self._ifixthat_helper_file_exists(filename):
+        #_ifixthat_print_or_not('backing up previous '+filename)
+        self._ifixthat_helper_file_archive(filename)
+    #_ifixthat_print_or_not('writing file')
+    #check len of file
+    if self._ifixthat_helper_check_strbytelen(filename):
+        myfile = open(filename, "wt")
+        myfile.write(content)
+        myfile.close()
+
+def _ifixthat_helper_file_read(self,filename):
+    if self._ifixthat_helper_file_exists(filename):
+        myfile = open(filename, "rt")
+        myfilecontent = myfile.read()
+        myfile.close()
+        return myfilecontent
+    else:
+        return ''
+
 ##IFixThat_end
+
+#################################################################################################################################################################################### single video
 
 class XVideosIE(InfoExtractor):
 
@@ -127,120 +184,41 @@ class XVideosIE(InfoExtractor):
     #                    (?P<id>[0-9]+)
     #                '''
 
-    ##IFixThat TODO=adjust 1)urls 2)info_dict ?)md5
+    ##IFixThat TODO ?)md5 1) other-urls
     _TESTS = [{
-        'url': 'http://www.xvideos.com/video4588838/biker_takes_his_girl',
-        'md5': '14cea69fcb84db54293b1e971466c2e1',
+        'url': 'https://www.xvideos.com/video.ifbhcpf7201/when_girls_play_-_adriana_chechik_abella_danger_-_betrayal_-_twistys',
+        'md5': '---', # how when nideo is hls
         'info_dict': {
-            'id': '4588838',
+            'id': 'ifbhcpf7201',
+            'id_new': 'ifbhcpf7201',
+            'id_old': '50011247',
             'ext': 'mp4',
-            'title': 'Biker Takes his Girl',
-            'duration': 108,
+            'title': 'When Girls Play - (Adriana Chechik, Abella Danger) - Betrayal - Twistys', # When Girls Play - &lpar;Adriana Chechik&comma; Abella Danger&rpar; - Betrayal - Twistys
+            'duration': 720,
             'age_limit': 18,
         }
     }, {
-        'url': 'https://flashservice.xvideos.com/embedframe/4588838',
+        'url': 'x1',
         'only_matching': True,
     }, {
-        'url': 'http://static-hw.xvideos.com/swf/xv-player.swf?id_video=4588838',
+        'url': 'x2',
         'only_matching': True,
     }, {
-        'url': 'http://xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://xvideos.es/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://www.xvideos.es/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'http://xvideos.es/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'http://www.xvideos.es/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'http://fr.xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://fr.xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'http://it.xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://it.xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'http://de.xvideos.com/video4588838/biker_takes_his_girl',
-        'only_matching': True
-    }, {
-        'url': 'https://de.xvideos.com/video4588838/biker_takes_his_girl',
+        'url': 'x3',
         'only_matching': True
     }]
 
-    ##IFixThat general helper functions (I insert them into every Extractor that I modify - can be removed if not needed)
-
-    def _ifixthat_helper_file_exists(self,filename):
-        print('does '+filename+' exist?')
-        if os.path.exists(filename):
-            print('yes')
-            return True
-        else:
-            print('no')
-            return False
-
-    def _ifixthat_helper_check_strbytelen(self,string):
-        strbytelen = len(string)
-        # is string (filename/paths) too long -> this value is customized to my setup and works for me - probably needs some more testing with diff. filesystems, filepaths, videos, ...
-        if strbytelen > 274:
-            return False
-        else:
-            return True
-
-    def _ifixthat_helper_file_mv(self,filename_old, filename_new):
-        if self._ifixthat_helper_check_strbytelen(filename_new):
-            os.rename(filename_old, filename_new)
-
-    def _ifixthat_helper_file_archive(self,filename):
-        self._ifixthat_helper_file_mv(filename, filename+'.backup_'+datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
-
-    def _ifixthat_helper_file_write(self,filename, content):
-        if self._ifixthat_helper_file_exists(filename):
-            #print('backing up previous '+filename)
-            self._ifixthat_helper_file_archive(filename)
-        #print('writing file')
-        #check len of file
-        if self._ifixthat_helper_check_strbytelen(filename):
-            myfile = open(filename, "wt")
-            myfile.write(content)
-            myfile.close()
-
-    def _ifixthat_helper_file_read(self,filename):
-        if self._ifixthat_helper_file_exists(filename):
-            myfile = open(filename, "rt")
-            myfilecontent = myfile.read()
-            myfile.close()
-            return myfilecontent
-        else:
-            return ''
-
-    ##IFixThat_end
-
     # from dirkf pr
-    @classmethod
-    def suitable(cls, url):
-        EXCLUDE_IE = (XVideosRelatedIE, )
-        return (False if any(ie.suitable(url) for ie in EXCLUDE_IE)
-                else super(XVideosIE, cls).suitable(url))
+    #@classmethod
+    #def suitable(cls, url):
+    #    EXCLUDE_IE = (XVideosRelatedIE, )
+    #    return (False if any(ie.suitable(url) for ie in EXCLUDE_IE)
+    #            else super(XVideosIE, cls).suitable(url))
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
 
-        ##IFixThat update initial download to accommodate for old and new ID-scheme
+        ##IFixThat update initial download to accommodate for old and new ID-scheme -- due to redirect always new ?
 
         ift_vidid_wp = '.'+video_id # assume new alphanum with .
         ift_vidid_new = video_id
@@ -261,20 +239,10 @@ class XVideosIE(InfoExtractor):
         if mobj:
             raise ExtractorError('%s said: %s' % (self.IE_NAME, clean_html(mobj.group(1))), expected=True)
 
-        ##IFixThat get for now : old/new ids ++ for later : uploader + tags + actors
+        ##IFixThat old/new ids
 
-## ,"id_video":50011247,"encoded_id_video":"ifbhcpf7201","uploader_id":11422220,"uploader":"twistys1","uploader_url":"\/twistys1","video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],"video_models":{"22053533":{"name":"Abella Danger","profile":"abella-danger","uri":"\/pornstars\/abella-danger"},"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"}}}};</script>
-
-##,"id_video":35757155,"encoded_id_video":"iihvcpkf375","uploader_id":24819879,"uploader":"girlswayofficial","uploader_url":"\/girlswayofficial","video_tags":["lesbian","boobs","hot","pornstar","brunette","fingering","squirting","masturbation","pussy-licking","college","facesitting","tribbing","big-tits","nice-ass","romance","girl-on-girl","natural-tits","adriana-chechik","megan-rain"],"video_models":{"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"},"14193845":{"name":"Megan Rain","profile":"megan-rain","uri":"\/pornstars\/megan-rain"}}}};</script>
-
-##,"id_video":1067228,"encoded_id_video":"htuldcb8a9","uploader_id":1705824,"uploader":"","video_tags":[],"video_models":{"6957567":{"name":"Leonie Saint","profile":"leonie-saint","uri":"\/models\/leonie-saint"}}}};</script>
-
-##,"id_video":64065209,"encoded_id_video":"kdhlebvb94e","uploader_id":522199271,"uploader":"sperm-mania","uploader_url":"\/sperm-mania","video_tags":["facial","creampie","shorthair","bukkake","bbw","marie","cumshot-compilation","huge-cumshot","pussy-bukkake","cum-fetish","cum-in-panties","japanese-bukkake","cum-lube","cock-cum","bukkake-compilation"],"video_models":[]}};</script>
-
-#### TO
-## ,"id_video":([0-9]+),"encoded_id_video":"([a-z0-9]+)","uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:"uploader_url":"\/([-a-z0-9]+)",|)"video_tags":(\[[^]]\]),"video_models":{"22053533":{"name":"Abella Danger","profile":"abella-danger","uri":"\/pornstars\/abella-danger"},"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"}}
         video_meta_matches = re.findall(
-            r'"id_video":([0-9]+),"encoded_id_video":"([a-z0-9]+)"', webpage)
+            r',"id_video":([0-9]+),"encoded_id_video":"([a-z0-9]+)",', webpage)
         if len(video_meta_matches) > 0:
             if ift_idscheme == 'new':
                 ift_vidid_old = video_meta_matches[0][0]
@@ -309,6 +277,19 @@ class XVideosIE(InfoExtractor):
                 r'''<span [^>]*\bclass\s*=\s*["']duration\b[^>]+>.*?(\d[^<]+)''',
                 webpage, 'duration', fatal=False))
 
+        ##IFixThat debug output
+
+        _ifixthat_print_or_not('[[[ video_id : "%s"' % video_id)
+        _ifixthat_print_or_not('[[[ ift_idscheme : "%s"' % ift_idscheme)
+        _ifixthat_print_or_not('[[[ ift_vidid_new : "%s"' % ift_vidid_new)
+        _ifixthat_print_or_not('[[[ ift_vidid_old : "%s"' % ift_vidid_old)
+        _ifixthat_print_or_not('[[[ duration : "%s"' % duration)
+        _ifixthat_print_or_not('[[[ title : "%s"' % title)
+        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
+        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
+
+        ##IFixThat_end
+
         formats = []
 
         ##IFixThat -- probably no loger needed - I have not encountered flv-videos for multiple years now
@@ -320,12 +301,12 @@ class XVideosIE(InfoExtractor):
                 'format_id': 'flv',
             })
 
-        ##IFixThat adding contenturl (same as setVideoUrlHigh ?)
+        ##IFixThat_end
 
         video_url = re.findall(
             r'"contentUrl": "([^"]+)"', webpage)
-        #print('video_url')
-        #print(video_url)
+        #_ifixthat_print_or_not('video_url')
+        #_ifixthat_print_or_not(video_url)
         # should be only one
         if len(video_url) > 0:
             formats.append({
@@ -358,21 +339,84 @@ class XVideosIE(InfoExtractor):
 
         self._sort_formats(formats)
 
-## ,"uploader":"twistys1","uploader_url":"\/twistys1","video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],"video_models":{"22053533":{"name":"Abella Danger","profile":"abella-danger","uri":"\/pornstars\/abella-danger"},"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"}}}};
+        ##IFixThat old/new ids ++ for later : uploader + tags + actors
+
+## ,"id_video":50011247,"encoded_id_video":"ifbhcpf7201","uploader_id":11422220,"uploader":"twistys1","uploader_url":"\/twistys1","video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],"video_models":{"22053533":{"name":"Abella Danger","profile":"abella-danger","uri":"\/pornstars\/abella-danger"},"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"}}}};</script>
+
+##,"id_video":35757155,"encoded_id_video":"iihvcpkf375","uploader_id":24819879,"uploader":"girlswayofficial","uploader_url":"\/girlswayofficial","video_tags":["lesbian","boobs","hot","pornstar","brunette","fingering","squirting","masturbation","pussy-licking","college","facesitting","tribbing","big-tits","nice-ass","romance","girl-on-girl","natural-tits","adriana-chechik","megan-rain"],"video_models":{"8415660":{"name":"Adriana Chechik","profile":"adriana-chechik","uri":"\/pornstars\/adriana-chechik"},"14193845":{"name":"Megan Rain","profile":"megan-rain","uri":"\/pornstars\/megan-rain"}}}};</script>
+
+##,"id_video":1067228,"encoded_id_video":"htuldcb8a9","uploader_id":1705824,"uploader":"","video_tags":[],"video_models":{"6957567":{"name":"Leonie Saint","profile":"leonie-saint","uri":"\/models\/leonie-saint"}}}};</script>
+
+##,"id_video":64065209,"encoded_id_video":"kdhlebvb94e","uploader_id":522199271,"uploader":"sperm-mania","uploader_url":"\/sperm-mania","video_tags":["facial","creampie","shorthair","bukkake","bbw","marie","cumshot-compilation","huge-cumshot","pussy-bukkake","cum-fetish","cum-in-panties","japanese-bukkake","cum-lube","cock-cum","bukkake-compilation"],"video_models":[]}};</script>
+
+#### TO
+#,"uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:,"uploader_url":"\\/([-a-z0-9]+)"|)
+#,"video_tags":(\[[^]].\]),
+#,"video_models":{"([0-9]+)":{"name":"Abella Danger","profile":"abella-danger","uri":"\/pornstars\/abella-danger"},?...}
 
         ##IFixThat adding uploader
 
+        uploader = 'NULL'
+        uploader_id = 'NULL'
+        uploader_url = 'NULL'
+        video_meta_matches = re.findall(
+            r',"uploader_id":([0-9]+),"uploader":"([-a-z0-9]+|)",(?:,"uploader_url":"\\/([-a-z0-9]+)"|)', webpage)
+        if len(video_meta_matches) > 0:
+            uploader_id = video_meta_matches[0][0]
+            if video_meta_matches[0][1] == '':
+                # replace with _ as empty strings may not work in paths
+                uploader = '_'
+                uploader_url = ''
+            else:
+                uploader = video_meta_matches[0][1]
+                uploader_url = video_meta_matches[0][2]
+        _ifixthat_print_or_not('[[[ uploader : "%s"' % uploader)
+        _ifixthat_print_or_not('[[[ uploader_id : "%s"' % uploader_id)
+        _ifixthat_print_or_not('[[[ uploader_url : "%s"' % uploader_url)
+        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
+
         ##IFixThat adding actors
 
-        ##IFixThat adding tags
-#<meta name="keywords" content="xvideos,xvideos.com, x videos,x video,porn,video,videos,lesbian,teen,hardcore,latina,rough,squirt,big-ass,cheater,twistys,cheat,ass-play,when-girls-play"/>
-#VS
-#,"video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],
+        ##IFixThat adding tags (now from @DarkFighterLuke , but going to be changed into my own version later)
 
+        # <meta name="keywords" content="xvideos,xvideos.com, x videos,x video,porn,video,videos,lesbian,teen,hardcore,latina,rough,squirt,big-ass,cheater,twistys,cheat,ass-play,when-girls-play"/>
+        tags = self._search_regex(r'<meta name="keywords" content="xvideos,xvideos\.com, x videos,x video,porn,video,videos,(?P<tag>.+?)"', webpage, 'tags', group='tag', default='').split(',')
+        # VS
+        # ,"video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],
+        #tags = []
+        #video_meta_matches = re.findall(
+        #    r'', webpage)
+        #if len(video_meta_matches) > 0:
+        #    tags = video_meta_matches[0][0] # transformation needed ?
+        #else:
+        #    tags = self._search_regex(r'<meta name="keywords" content="xvideos,xvideos\.com, x videos,x video,porn,video,videos,(?P<tag>.+?)"', webpage, 'tags', group='tag', default='').split(',')
 
         ##IFixThat_end
 
+######################################## @DarkFighterLuke
+
+        creator_data = re.findall(r'<a href="(?P<creator_url>.+?)" class="btn btn-default label main uploader-tag hover-name"><span class="name">(?P<creator>.+?)<', webpage)
+        creator = None
+        uploader_url = None
+        if creator_data != []:
+            uploader_url, creator = creator_data[0][0:2]
+
+        actors_data = re.findall(r'href="(?P<actor_url>/pornstars/.+?)" class="btn btn-default label profile hover-name"><span class="name">(?P<actor_name>.+?)</span>', webpage)
+        actors = []
+        if actors_data != []:
+            for actor_tuple in actors_data:
+                actors.append({
+                    'given_name': actor_tuple[1],
+                    'url': urljoin(url, actor_tuple[0]),
+                })
+
+        # pre-fix '<div id="v-views"><span class="icon-f icf-eye"></span>'
+        #views = self._search_regex(r'<strong class="mobile-hide">(?P<views>.+?)<', webpage, 'views', group='views', default=None)
+        ## VS dirkf
+        views = parse_count(get_element_by_class('mobile-hide', get_element_by_id('v-views', webpage)))
+
 ########################################
+
         # get uploader
         uploader_type = ''
         uploader_name_url = ''
@@ -430,6 +474,7 @@ class XVideosIE(InfoExtractor):
                     'tag_url': mymatch[0],
                     'tag_name': mymatch[2],
                 })
+
 ########################################
 
         return {
@@ -441,4 +486,36 @@ class XVideosIE(InfoExtractor):
             'duration': duration,
             'thumbnails': thumbnails,
             'age_limit': 18,
+            'view_count': str_to_int(views),
+            'tags': tags,
+           # 'creator': creator,
+            'uploader': uploader,
+            'uploader_id': uploader_id,
+            'uploader_url': uploader_url,
+           # 'actors': actors,
+           ## 'otherprofiles': otherprofiles,
+           # 'tags': tags,
+           # 'uploader_type': uploader_type,
+           # 'uploader_name_url': uploader_name_url,
+           # 'uploader_name_txt': uploader_name_txt,
+           # 'uploader_name_txt_orig': uploader_name_txt_orig,
+           # 'uploader_user_id': uploader_user_id,
+           # 'uploader_user_profile': uploader_user_profile,
+           # 'redpm_webpage_url_basename': url_basename(url),
         }
+
+#################################################################################################################################################################################### diff-user-types
+
+#class XVideosUserIE(InfoExtractor):
+
+#################################################################################################################################################################################### tag
+
+#class XVideosTagIE(InfoExtractor):
+
+#################################################################################################################################################################################### search
+
+#class XVideosSearchIE(InfoExtractor):
+
+
+
+
