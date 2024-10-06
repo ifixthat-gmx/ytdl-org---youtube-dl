@@ -143,7 +143,7 @@ class XVideosIE(InfoExtractor):
                             (?:
                                 # xvideos\d+\.com redirects to xvideos.com
                                 # (?P<country>[a-z]{2})\.xvideos.com too: catch it anyway
-                                (?:[^/]+\.)?xvideos\.com/(?:video\.|prof-video-click/model/[^/]+/)|
+                                (?:[^/]+\.)?xvideos\.com/(?:video\.?|prof-video-click/model/[^/]+/)|
                                 (?:www\.)?xvideos\.es/video|
                                 (?:www|flashservice)\.xvideos\.com/embedframe/|
                                 static-hw\.xvideos\.com/swf/xv-player\.swf\?.*?\bid_video=
