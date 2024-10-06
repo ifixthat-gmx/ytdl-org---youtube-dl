@@ -58,7 +58,7 @@ import os
 def _ifixthat_print_or_not(line):
     doprint = 1 # 0=normal , 1=debug
     if doprint > 0:
-        print(line)
+        print(' [[[ '+line)
 
 ##IFixThat general helper functions (I insert them into every Extractor that I modify - can be removed if not needed)
 
@@ -277,19 +277,6 @@ class XVideosIE(InfoExtractor):
                 r'''<span [^>]*\bclass\s*=\s*["']duration\b[^>]+>.*?(\d[^<]+)''',
                 webpage, 'duration', fatal=False))
 
-        ##IFixThat debug output
-
-        _ifixthat_print_or_not('[[[ video_id : "%s"' % video_id)
-        _ifixthat_print_or_not('[[[ ift_idscheme : "%s"' % ift_idscheme)
-        _ifixthat_print_or_not('[[[ ift_vidid_new : "%s"' % ift_vidid_new)
-        _ifixthat_print_or_not('[[[ ift_vidid_old : "%s"' % ift_vidid_old)
-        _ifixthat_print_or_not('[[[ duration : "%s"' % duration)
-        _ifixthat_print_or_not('[[[ title : "%s"' % title)
-        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
-        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
-
-        ##IFixThat_end
-
         formats = []
 
         ##IFixThat -- probably no loger needed - I have not encountered flv-videos for multiple years now
@@ -356,6 +343,14 @@ class XVideosIE(InfoExtractor):
 
         ##IFixThat adding uploader
 
+        #@DarkFighterLuke
+        #creator_data = re.findall(r'<a href="(?P<creator_url>.+?)" class="btn btn-default label main uploader-tag hover-name"><span class="name">(?P<creator>.+?)<', webpage)
+        #creator = None
+        #uploader_url = None
+        #if creator_data != []:
+        #    uploader_url, creator = creator_data[0][0:2]
+
+        # get uploader from meta
         uploader = 'NULL'
         uploader_id = 'NULL'
         uploader_url = 'NULL'
@@ -366,21 +361,81 @@ class XVideosIE(InfoExtractor):
             if video_meta_matches[0][1] == '':
                 # replace with _ as empty strings may not work in paths
                 uploader = '_'
-                uploader_url = ''
+                uploader_url = '/'
             else:
                 uploader = video_meta_matches[0][1]
                 uploader_url = video_meta_matches[0][2]
-        _ifixthat_print_or_not('[[[ uploader : "%s"' % uploader)
-        _ifixthat_print_or_not('[[[ uploader_id : "%s"' % uploader_id)
-        _ifixthat_print_or_not('[[[ uploader_url : "%s"' % uploader_url)
-        #_ifixthat_print_or_not('[[[ xxx : "%s"' % xxx)
+
+        # get uploader from url-list for more info
+        uploader_type = 'NULL'
+        uploader_name_url = '_'
+        uploader_name_txt = '_'
+        uploader_name_txt_orig = '_'
+        uploader_user_id = 'NULL'
+        uploader_user_profile = 'NULL'
+        # <li class="main-uploader"><a href="/channels/studio-fow" class="btn btn-default label main uploader-tag hover-name"><span class="name"><span class="icon-f icf-device-tv-v2"></span> Studio Fow</span><span class="user-subscribe" data-user-id="9267136" data-user-profile="studio-fow"><span class="count">308k</span></span></a></li>
+        # <li class="main-uploader"><a href="/profiles/hmvthief" class="btn btn-default label main uploader-tag hover-name"><span class="name">Hmvthief</span><span class="user-subscribe" data-user-id="507454529" data-user-profile="hmvthief"><span class="count">2k</span></span></a></li>
+        uploader_matches = re.findall(r'<li(?: class="main-uploader"|)><a href="/(amateur-channels|channels|model-channels|models|pornstar-channels|pornstars|profiles|)/?([a-zA-Z0-9\-\._]+)" class="btn btn-default label main uploader-tag hover-name"><span class="name">(?:<span class="icon-f icf-device-tv-v2"></span> |)([a-zA-Z0-9\-\._\s]+)</span>(?:<span class="icon-f icf-check-circle verified" title="Verified uploader"></span>|)<span class="[a-zA-Z0-9\-\s]*" data-user-id="([0-9]+)" data-user-profile="([a-zA-Z0-9\-\._]+)">', webpage)
+        #print(uploader_matches)
+        #print(len(uploader_matches))
+        if len(uploader_matches) > 0:
+            if not uploader_matches[0][0] == '':
+                uploader_type = uploader_matches[0][0]
+                _ifixthat_print_or_not('non empty type')
+            else:
+                uploader_type = 'channels' # empty ''=channels
+                _ifixthat_print_or_not('empty type = channels')
+            uploader_name_url = uploader_matches[0][1]
+            uploader_name_txt_orig = uploader_matches[0][2]
+            # replace " " with "-"
+            uploader_name_txt = uploader_name_txt_orig.replace(" ","-")
+            uploader_user_id = uploader_matches[0][3]
+            uploader_user_profile = uploader_matches[0][4]
 
         ##IFixThat adding actors
+
+        #@DarkFighterLuke
+        #actors_data = re.findall(r'href="(?P<actor_url>/pornstars/.+?)" class="btn btn-default label profile hover-name"><span class="name">(?P<actor_name>.+?)</span>', webpage)
+        #actors = []
+        #if actors_data != []:
+        #    for actor_tuple in actors_data:
+        #        actors.append({
+        #            'given_name': actor_tuple[1],
+        #            'url': urljoin(url, actor_tuple[0]),
+        #        })
+
+        # get all others
+        otherprofiles = []
+        ## <li class="model"><a href="/pornstars/kendra-spade" class="btn btn-default label profile hover-name is-pornstar" data-id="194201359"><span class="name"><span class="icon-f icf-star-o"></span> Kendra Spade</span><span class="user-subscribe" data-user-id="194201359" data-user-profile="kendra-spade"><span class="count">283k</span></span></a></li>
+        # <li class="model"><a href="/models/leonie-saint" class="btn btn-default label profile hover-name is-pornstar" data-id="6957567"><span class="model-star-sub icon-f icf-star-o" data-user-id="6957567" data-user-profile="leonie-saint"></span><span class="name">Leonie Saint</span><span class="user-subscribe" data-user-id="6957567" data-user-profile="leonie-saint"><span class="count">12k</span></span></a></li>
+        # <li class="model"><a href="/pornstars/abella-danger" class="btn btn-default label profile hover-name is-pornstar" data-id="22053533"><span class="model-star-sub icon-f icf-star-o" data-user-id="22053533" data-user-profile="abella-danger"></span><span class="name">Abella Danger</span><span class="user-subscribe" data-user-id="22053533" data-user-profile="abella-danger"><span class="count">1M</span></span></a></li><li class="model"><a href="/pornstars/adriana-chechik" class="btn btn-default label profile hover-name is-pornstar" data-id="8415660"><span class="model-star-sub icon-f icf-star-o" data-user-id="8415660" data-user-profile="adriana-chechik"></span><span class="name">Adriana Chechik</span><span class="user-subscribe" data-user-id="8415660" data-user-profile="adriana-chechik"><span class="count">857k</span></span></a></li>
+        mymatches = re.findall(r'<li(?: class="model"|)><a href="/(amateur-channels|channels|model-channels|models|pornstar-channels|pornstars|profiles)/([a-zA-Z0-9\-\._]+)" class="btn btn-default label profile hover-name(?: is-pornstar|)" data-id="([0-9]+)"><span class="(?:[^"]+)" data-user-id="\3" data-user-profile="([a-zA-Z0-9\-\._]+)"></span><span class="name">([a-zA-Z0-9\-\._\s]+)</span><span class="user-subscribe" data-user-id="\3" data-user-profile="\4"><span class="count">(?:[0-9]+(?:k|M)?)</span></span></a></li>', webpage)
+        #print(mymatches)
+        # match:1 = type
+        # match:2 = name_url
+        # match:3 = user_id
+        # match:4 = user_profile
+        # match:5 = name_txt
+        for mymatch in mymatches:
+            #print(mymatch)
+            #otherprofiles.append(mymatch)
+            otherprofiles.append({
+                    'type': mymatch[0],
+                    'name_url': mymatch[1],
+                    'user_id': mymatch[2],
+                    'user_profile': mymatch[3],
+                    'name_txt': mymatch[4],
+                })
 
         ##IFixThat adding tags (now from @DarkFighterLuke , but going to be changed into my own version later)
 
         # <meta name="keywords" content="xvideos,xvideos.com, x videos,x video,porn,video,videos,lesbian,teen,hardcore,latina,rough,squirt,big-ass,cheater,twistys,cheat,ass-play,when-girls-play"/>
         tags = self._search_regex(r'<meta name="keywords" content="xvideos,xvideos\.com, x videos,x video,porn,video,videos,(?P<tag>.+?)"', webpage, 'tags', group='tag', default='').split(',')
+        if not tags == ['']:
+            _ifixthat_print_or_not('tags length > 0')
+        else:
+            _ifixthat_print_or_not('tags - 0')
+            tags = []
         # VS
         # ,"video_tags":["lesbian","teen","hardcore","latina","rough","squirt","big-ass","cheater","twistys","cheat","ass-play","when-girls-play"],
         #tags = []
@@ -391,91 +446,54 @@ class XVideosIE(InfoExtractor):
         #else:
         #    tags = self._search_regex(r'<meta name="keywords" content="xvideos,xvideos\.com, x videos,x video,porn,video,videos,(?P<tag>.+?)"', webpage, 'tags', group='tag', default='').split(',')
 
+        # get tags
+        #tags = []
+        #mymatches = re.findall(r'<li><a href="/tags/([a-zA-Z0-9\-]+)" class="(is-keyword |)btn btn-default">([a-zA-Z0-9\-]+)</a></li>', webpage)
+        #print(mymatches)
+        # match:1 = tag_url
+        # match:2 = tag_name
+        #for mymatch in mymatches:
+            #print(mymatch)
+            #otherprofiles.append(mymatch)
+        #    tags.append({
+        #            'tag_url': mymatch[0],
+        #            'tag_name': mymatch[2],
+        #        })
+
         ##IFixThat_end
-
-######################################## @DarkFighterLuke
-
-        creator_data = re.findall(r'<a href="(?P<creator_url>.+?)" class="btn btn-default label main uploader-tag hover-name"><span class="name">(?P<creator>.+?)<', webpage)
-        creator = None
-        uploader_url = None
-        if creator_data != []:
-            uploader_url, creator = creator_data[0][0:2]
-
-        actors_data = re.findall(r'href="(?P<actor_url>/pornstars/.+?)" class="btn btn-default label profile hover-name"><span class="name">(?P<actor_name>.+?)</span>', webpage)
-        actors = []
-        if actors_data != []:
-            for actor_tuple in actors_data:
-                actors.append({
-                    'given_name': actor_tuple[1],
-                    'url': urljoin(url, actor_tuple[0]),
-                })
 
         # pre-fix '<div id="v-views"><span class="icon-f icf-eye"></span>'
         #views = self._search_regex(r'<strong class="mobile-hide">(?P<views>.+?)<', webpage, 'views', group='views', default=None)
         ## VS dirkf
         views = parse_count(get_element_by_class('mobile-hide', get_element_by_id('v-views', webpage)))
 
-########################################
+        ##IFixThat debug output
 
-        # get uploader
-        uploader_type = ''
-        uploader_name_url = ''
-        uploader_name_txt = ''
-        uploader_name_txt_orig = ''
-        uploader_user_id = ''
-        uploader_user_profile = ''
-        # <li class="main-uploader"><a href="/channels/studio-fow" class="btn btn-default label main uploader-tag hover-name"><span class="name"><span class="icon-f icf-device-tv-v2"></span> Studio Fow</span><span class="user-subscribe" data-user-id="9267136" data-user-profile="studio-fow"><span class="count">308k</span></span></a></li>
-        # <li class="main-uploader"><a href="/profiles/hmvthief" class="btn btn-default label main uploader-tag hover-name"><span class="name">Hmvthief</span><span class="user-subscribe" data-user-id="507454529" data-user-profile="hmvthief"><span class="count">2k</span></span></a></li>
-        uploader_matches = re.findall(r'<li(?: class="main-uploader"|)><a href="/(amateur-channels|channels|model-channels|models|pornstar-channels|pornstars|profiles)/([a-zA-Z0-9\-\._]+)" class="btn btn-default label main uploader-tag hover-name"><span class="name">(?:<span class="icon-f icf-device-tv-v2"></span> |)([a-zA-Z0-9\-\._\s]+)</span>(?:<span class="icon-f icf-check-circle verified" title="Verified uploader"></span>|)<span class="[a-zA-Z0-9\-\s]*" data-user-id="([0-9]+)" data-user-profile="([a-zA-Z0-9\-\._]+)">', webpage)
-        #print(uploader_matches)
-        #print(len(uploader_matches))
-        if len(uploader_matches) > 0:
-            uploader_type = uploader_matches[0][0]
-            uploader_name_url = uploader_matches[0][1]
-            uploader_name_txt_orig = uploader_matches[0][2]
-            # replace " " with "-"
-            uploader_name_txt = uploader_name_txt_orig.replace(" ","-")
-            uploader_user_id = uploader_matches[0][3]
-            uploader_user_profile = uploader_matches[0][4]
+        _ifixthat_print_or_not(']]]]]]]]]]]]]]]]]]')
+        _ifixthat_print_or_not('title : "%s"' % title)
+        _ifixthat_print_or_not('video_id : "%s"' % video_id)
+        _ifixthat_print_or_not('ift_idscheme : "%s"' % ift_idscheme)
+        _ifixthat_print_or_not('ift_vidid_new : "%s"' % ift_vidid_new)
+        _ifixthat_print_or_not('ift_vidid_old : "%s"' % ift_vidid_old)
+        _ifixthat_print_or_not('duration : "%s"' % duration)
+        _ifixthat_print_or_not('views : "%s"' % views)
+        _ifixthat_print_or_not('uploader : "%s"' % uploader)
+        _ifixthat_print_or_not('uploader_id : "%s"' % uploader_id)
+        _ifixthat_print_or_not('uploader_url : "%s"' % uploader_url)
+        _ifixthat_print_or_not('uploader_type : "%s"' % uploader_type)
+        _ifixthat_print_or_not('uploader_name_url : "%s"' % uploader_name_url)
+        _ifixthat_print_or_not('uploader_name_txt : "%s"' % uploader_name_txt)
+        _ifixthat_print_or_not('uploader_name_txt_orig : "%s"' % uploader_name_txt_orig)
+        _ifixthat_print_or_not('uploader_user_id : "%s"' % uploader_user_id)
+        _ifixthat_print_or_not('uploader_user_profile : "%s"' % uploader_user_profile)
+        _ifixthat_print_or_not('otherprofiles : "%s"' % otherprofiles)
+        _ifixthat_print_or_not('tags : "%s"' % tags)
+        #_ifixthat_print_or_not('xxx : "%s"' % xxx)
+        #_ifixthat_print_or_not('xxx : "%s"' % xxx)
+        #_ifixthat_print_or_not('xxx : "%s"' % xxx)
+        #_ifixthat_print_or_not('xxx : "%s"' % xxx)
 
-        # get all others
-        otherprofiles = []
-        # <li class="model"><a href="/pornstars/kendra-spade" class="btn btn-default label profile hover-name is-pornstar" data-id="194201359"><span class="name"><span class="icon-f icf-star-o"></span> Kendra Spade</span><span class="user-subscribe" data-user-id="194201359" data-user-profile="kendra-spade"><span class="count">283k</span></span></a></li>
-        mymatches = re.findall(r'<li(?: class="model"|)><a href="/(amateur-channels|channels|model-channels|models|pornstar-channels|pornstars|profiles)/([a-zA-Z0-9\-\._]+)" class="btn btn-default label profile hover-name(?: is-pornstar|)" data-id="([0-9]+)"><span class="name">(?:<span class="icon-f icf-star-o"></span> |)([a-zA-Z0-9\-\._\s]+)</span>(?:<span class="icon-f icf-check-circle icf-white-fill verified" title="This profile is verified"></span>|)<span class="[a-zA-Z0-9\-\s]*" data-user-id="([0-9]+)" data-user-profile="([a-zA-Z0-9\-\._]+)">', webpage)
-        #print(mymatches)
-        # match:1 = type
-        # match:2 = name_url
-        # match:3 = name_txt
-        # match:4 = verified
-        # match:5 = user_id
-        # match:6 = user_profile
-        # match:7 = x
-        for mymatch in mymatches:
-            #print(mymatch)
-            #otherprofiles.append(mymatch)
-            otherprofiles.append({
-                    'type': mymatch[0],
-                    'name_url': mymatch[1],
-                    'data_id': mymatch[2],
-                    'name_txt': mymatch[3],
-                    'user_id': mymatch[4],
-                    'user_profile': mymatch[5],
-                })
-        # get tags
-        tags = []
-        mymatches = re.findall(r'<li><a href="/tags/([a-zA-Z0-9\-]+)" class="(is-keyword |)btn btn-default">([a-zA-Z0-9\-]+)</a></li>', webpage)
-        #print(mymatches)
-        # match:1 = tag_url
-        # match:2 = tag_name
-        for mymatch in mymatches:
-            #print(mymatch)
-            #otherprofiles.append(mymatch)
-            tags.append({
-                    'tag_url': mymatch[0],
-                    'tag_name': mymatch[2],
-                })
-
-########################################
+        ##IFixThat_end
 
         return {
             'id': video_id,
@@ -488,20 +506,17 @@ class XVideosIE(InfoExtractor):
             'age_limit': 18,
             'view_count': str_to_int(views),
             'tags': tags,
-           # 'creator': creator,
             'uploader': uploader,
             'uploader_id': uploader_id,
             'uploader_url': uploader_url,
+            'uploader_type': uploader_type,
+            'uploader_name_url': uploader_name_url,
+            'uploader_name_txt': uploader_name_txt,
+            'uploader_name_txt_orig': uploader_name_txt_orig,
+            'uploader_user_id': uploader_user_id, # same as uploader_id ?
+            'uploader_user_profile': uploader_user_profile, # same as uploader_name_url ?
            # 'actors': actors,
            ## 'otherprofiles': otherprofiles,
-           # 'tags': tags,
-           # 'uploader_type': uploader_type,
-           # 'uploader_name_url': uploader_name_url,
-           # 'uploader_name_txt': uploader_name_txt,
-           # 'uploader_name_txt_orig': uploader_name_txt_orig,
-           # 'uploader_user_id': uploader_user_id,
-           # 'uploader_user_profile': uploader_user_profile,
-           # 'redpm_webpage_url_basename': url_basename(url),
         }
 
 #################################################################################################################################################################################### diff-user-types
