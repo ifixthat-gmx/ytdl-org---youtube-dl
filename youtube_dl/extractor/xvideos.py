@@ -54,17 +54,22 @@ import datetime
 import os
 
 import json
+import sys
+
+# import VS using dotenv-package
+# xvideos_enf_def = github - xvideos_enf = home
+from . import xvideos_enf_def # import VS using dotenv-package
 
 ##IFixThat debug print_or_not
 
 def _ifixthat_print_or_not(line):
-    doprint = 1 # 0=normal , 1=debug
-    if doprint > 0:
-        print(' [[[ '+line)
+    #doprint = 1 # 0=normal , 1=debug
+    if xvideos_env.debugprint > 0:
+        print(' [[[ '+line, file=sys.stderr)
 
 ##IFixThat general helper functions (I insert them into every Extractor that I modify - can be removed if not needed)
 
-def _ifixthat_helper_file_exists(self,filename):
+def _ifixthat_helper_file_exists(filename):
     _ifixthat_print_or_not('does '+filename+' exist?')
     if os.path.exists(filename):
         _ifixthat_print_or_not('yes')
@@ -73,7 +78,7 @@ def _ifixthat_helper_file_exists(self,filename):
         _ifixthat_print_or_not('no')
         return False
 
-def _ifixthat_helper_check_strbytelen(self,string):
+def _ifixthat_helper_check_strbytelen(string):
     strbytelen = len(string)
     # is string (filename/paths) too long -> this value is customized to my setup and works for me - probably needs some more testing with diff. filesystems, filepaths, videos, ...
     if strbytelen > 274:
@@ -81,26 +86,27 @@ def _ifixthat_helper_check_strbytelen(self,string):
     else:
         return True
 
-def _ifixthat_helper_file_mv(self,filename_old, filename_new):
-    if self._ifixthat_helper_check_strbytelen(filename_new):
+def _ifixthat_helper_file_mv(filename_old, filename_new):
+    if _ifixthat_helper_check_strbytelen(filename_new):
         os.rename(filename_old, filename_new)
 
-def _ifixthat_helper_file_archive(self,filename):
-    self._ifixthat_helper_file_mv(filename, filename+'.backup_'+datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+def _ifixthat_helper_file_archive(filename):
+    _ifixthat_helper_file_mv(filename, filename+'.backup_'+datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
 
-def _ifixthat_helper_file_write(self,filename, content):
-    if self._ifixthat_helper_file_exists(filename):
+def _ifixthat_helper_file_write(filename, content):
+    if _ifixthat_helper_file_exists(filename):
         #_ifixthat_print_or_not('backing up previous '+filename)
-        self._ifixthat_helper_file_archive(filename)
+        _ifixthat_helper_file_archive(filename)
     #_ifixthat_print_or_not('writing file')
     #check len of file
-    if self._ifixthat_helper_check_strbytelen(filename):
+    if _ifixthat_helper_check_strbytelen(filename):
+        # make sure parent dir exists ?
         myfile = open(filename, "wt")
         myfile.write(content)
         myfile.close()
 
-def _ifixthat_helper_file_read(self,filename):
-    if self._ifixthat_helper_file_exists(filename):
+def _ifixthat_helper_file_read(filename):
+    if _ifixthat_helper_file_exists(filename):
         myfile = open(filename, "rt")
         myfilecontent = myfile.read()
         myfile.close()
@@ -232,8 +238,20 @@ class XVideosIE(InfoExtractor):
             ift_vidid_new = '' # get from webpage later
             ift_idscheme = 'old'
 
-        webpage = self._download_webpage(
-            'https://www.xvideos.com/video%s/0' % ift_vidid_wp, video_id)
+        # already downloaded webpage ? - then read from file
+        webpage = ''
+        wp_filepath = '%s/com.xvideos.www--slash--video%s--slash--0.webpage.html' % (xvideos_env.basepath, ift_vidid_wp)
+        _ifixthat_print_or_not('wp_filepath "%s"' % wp_filepath)
+        if _ifixthat_helper_file_exists(wp_filepath) and xvideos_env.ignorestore == 0:
+            webpage = _ifixthat_helper_file_read(wp_filepath)
+            _ifixthat_print_or_not('read webpage from "%s"' % wp_filepath)
+        else:
+            webpage_url = 'https://www.xvideos.com/video%s/0' % ift_vidid_wp
+            webpage = self._download_webpage(webpage_url, video_id)
+            _ifixthat_print_or_not('downloaded webpage from "%s"' % webpage_url)
+            if xvideos_env.storehtml > 0:
+                _ifixthat_helper_file_write(wp_filepath, webpage)
+                _ifixthat_print_or_not('wrote webpage to "%s"' % wp_filepath)
 
         ##IFixThat_end
 
@@ -470,7 +488,12 @@ class XVideosIE(InfoExtractor):
         # pre-fix '<div id="v-views"><span class="icon-f icf-eye"></span>'
         #views = self._search_regex(r'<strong class="mobile-hide">(?P<views>.+?)<', webpage, 'views', group='views', default=None)
         ## VS dirkf
-        views = parse_count(get_element_by_class('mobile-hide', get_element_by_id('v-views', webpage)))
+        # throws error work when no view-counter
+        _ifixthat_print_or_not('get_element_by_id(v-views, webpage) >>>%s<<<' % get_element_by_id('v-views', webpage))
+        #views = parse_count(get_element_by_class('mobile-hide', get_element_by_id('v-views', webpage)))
+        views = 0
+        if not get_element_by_id('v-views', webpage) == None:
+            views = parse_count(get_element_by_class('mobile-hide', get_element_by_id('v-views', webpage)))
 
         ##IFixThat debug output
 
@@ -543,8 +566,7 @@ class XVideosUserIE(InfoExtractor):
                     '''
 
     def _entries(self, user_id, user_type, id_user):
-        # QUICKIES & VIDEOS
-        # https://www.xvideos.com/quickies-api/profilevideos/all/none/B/%ID_USER%/0 & https://www.xvideos.com/%%/%USER_ID%/videos/best/[0...]
+        ### QUICKIES & VIDEOS # https://www.xvideos.com/quickies-api/profilevideos/all/none/B/%ID_USER%/0 & https://www.xvideos.com/%%/%USER_ID%/videos/---/[0...]
         # yield self.url_result(video_url, ie=XVideosUserIE.ie_key(), video_id=video_id)
         quickies_urlbase = 'https://www.xvideos.com/quickies-api/profilevideos/all/none/B/%s/' % id_user
         quickies_url = quickies_urlbase + '0'
@@ -590,7 +612,10 @@ class XVideosUserIE(InfoExtractor):
 
 
         # page:0 always - rest if needed
-        videos_urlbase = 'https://www.xvideos.com/%s/%s/videos/best/' % (user_type, user_id)
+        # https://www.xvideos.com/profiles/boyzavideo/videos/rating/0
+        # https://www.xvideos.com/profiles/boyzavideo/videos/best/0
+        # https://www.xvideos.com/profiles/boyzavideo/videos/new/0
+        videos_urlbase = 'https://www.xvideos.com/%s/%s/videos/new/' % (user_type, user_id)
         videos_url = videos_urlbase + '0'
         _ifixthat_print_or_not('videos_url %s ' % videos_url)
         videos_json = self._download_webpage(videos_url, user_id)
@@ -647,12 +672,33 @@ class XVideosUserIE(InfoExtractor):
         if user_type == '':
             user_type = 'channels'
             _ifixthat_print_or_not('empty user_type set to channels')
-        userpage = 'https://www.xvideos.com/%s/%s' % (user_type, user_id)
-        webpage = self._download_webpage(userpage, user_id)
+
+        # already downloaded webpage ? - then read from file
+        webpage = ''
+        wp_filepath = '%s/com.xvideos.www--slash--%s--slash--%s.webpage.html' % (xvideos_env.basepath, user_type, user_id)
+        _ifixthat_print_or_not('wp_filepath "%s"' % wp_filepath)
+        if _ifixthat_helper_file_exists(wp_filepath) and xvideos_env.ignorestore == 0:
+            webpage = _ifixthat_helper_file_read(wp_filepath)
+            _ifixthat_print_or_not('read webpage from "%s"' % wp_filepath)
+        else:
+            webpage_url = 'https://www.xvideos.com/%s/%s' % (user_type, user_id)
+            webpage = self._download_webpage(webpage_url, user_id)
+            _ifixthat_print_or_not('downloaded webpage from "%s"' % webpage_url)
+            if xvideos_env.storehtml > 0:
+                _ifixthat_helper_file_write(wp_filepath, webpage)
+                _ifixthat_print_or_not('wrote webpage to "%s"' % wp_filepath)
+
         id_user = re.findall(r'"id_user":([0-9]+)', webpage)[0]
         _ifixthat_print_or_not('user_id %s + user_type %s ++ id_user %s' % (user_id, user_type, id_user))
 
-        return self.playlist_result(self._entries(user_id, user_type, id_user), user_id)
+        # how to add (user_name?) user_id, user_type, id_user to return
+        return merge_dicts(
+            self.playlist_result(self._entries(user_id, user_type, id_user), user_id),
+            {
+                'user_id': user_id,
+                'user_type': user_type,
+                'id_user': id_user,
+        })
 
 #################################################################################################################################################################################### tag
 
