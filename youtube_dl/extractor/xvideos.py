@@ -57,8 +57,8 @@ import json
 import sys
 
 # import VS using dotenv-package
-# xvideos_enf_def = github - xvideos_enf = home
-from . import xvideos_enf_def # import VS using dotenv-package
+# xvideos_env_def = github - xvideos_env_my = home
+from . import xvideos_env # import VS using dotenv-package
 
 ##IFixThat debug print_or_not
 
